@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thanks for reading</title>
+<style>
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f7f7f7;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    padding: 40px 32px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+  }
+  h1 { font-size: 20px; margin-bottom: 12px; color: #1a1a1a; }
+  p { font-size: 15px; color: #444; line-height: 1.5; }
+  .check {
+    margin: 0 auto 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #2e9e6a;
+    color: #fff;
+    font-size: 24px;
+    line-height: 44px;
+  }
+  .spinner {
+    margin: 0 auto 16px;
+    width: 28px;
+    height: 28px;
+    border: 3px solid #ddd;
+    border-top-color: #666;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>One moment...</p>
+  </div>
+
+  <div id="success" class="hidden">
+    <div class="check">&#10003;</div>
+    <h1>Thanks, you're all set</h1>
+    <p>We've noted that you're reading our emails. You can close this page.</p>
+  </div>
+
+  <div id="error" class="hidden">
+    <h1>Something went wrong</h1>
+    <p>We couldn't record your confirmation. Please reply to the email instead.</p>
+  </div>
+</div>
+
+<script>
+  // Zapier "Catch Hook" URL. The Zap logs who confirmed, and for which edition and region.
+  const WEBHOOK_URL = "REPLACE_WITH_YOUR_WEBHOOK_URL";
+
+  // Read query params with a regex instead of URLSearchParams:
+  // URLSearchParams turns a literal "+" into a space, which breaks
+  // addresses like jane+news@example.com (email platforms don't encode it).
+  function getQueryParam(name) {
+    const match = window.location.search.match(new RegExp("[?&]" + name + "=([^&]*)"));
+    if (!match) return null;
+    try {
+      return decodeURIComponent(match[1]);
+    } catch (e) {
+      return match[1];
+    }
+  }
+
+  async function fireWebhook() {
+    const email = getQueryParam("email");
+    const edition = getQueryParam("edition");
+    const region = getQueryParam("region");
+    const loading = document.getElementById("loading");
+    const success = document.getElementById("success");
+    const error = document.getElementById("error");
+
+    if (!email) {
+      loading.classList.add("hidden");
+      error.classList.remove("hidden");
+      return;
+    }
+
+    try {
+      let url = WEBHOOK_URL + "?email=" + encodeURIComponent(email);
+      if (edition) url += "&edition=" + encodeURIComponent(edition);
+      if (region) url += "&region=" + encodeURIComponent(region);
+      // no-cors: we can't read Zapier's response, but the request still lands
+      await fetch(url, { method: "GET", mode: "no-cors" });
+      loading.classList.add("hidden");
+      success.classList.remove("hidden");
+    } catch (e) {
+      loading.classList.add("hidden");
+      error.classList.remove("hidden");
+    }
+  }
+
+  fireWebhook();
+</script>
+
+</body>
+</html>
